@@ -12,3 +12,43 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model CalibrationSession {
+  id            String   @id @default(cuid())
+  userId        String?
+  deviceIdHash  String
+  sampleRate    Int
+  status        String   // started | room_ok | room_warn | completed | aborted
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+  metrics       CalibrationMetric[]
+  profile       CalibrationProfile?
+}
+
+model CalibrationProfile {
+  id               String   @id @default(cuid())
+  sessionId        String   @unique
+  session          CalibrationSession @relation(fields: [sessionId], references: [id])
+  noiseFloorDbfs   Float
+  rmsTargetMin     Float
+  rmsTargetMax     Float
+  clipTolerance    Int
+  latencyMs        Float
+  tunerOffsetCents Float?
+  createdAt        DateTime @default(now())
+}
+
+model CalibrationMetric {
+  id            String   @id @default(cuid())
+  sessionId     String
+  session       CalibrationSession @relation(fields: [sessionId], references: [id])
+  phase         String   // room_check | gain | metrics
+  windowMs      Int
+  avgRmsDb      Float?
+  stdRmsDb      Float?
+  clipRate      Float?
+  snrDb         Float?
+  baseLatencyMs Float?
+  result        String?  // OK | Fail
+  timestamp     DateTime @default(now())
+}
