@@ -49,6 +49,7 @@ model CalibrationMetric {
   clipRate      Float?
   snrDb         Float?
   baseLatencyMs Float?
+  noiseFloorDbfs Float?  // For room_check phase specifically
   result        String?  // OK | Fail
   timestamp     DateTime @default(now())
 }
