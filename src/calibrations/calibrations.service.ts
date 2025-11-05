@@ -7,7 +7,7 @@ import { GainTickDto, MetricsTickDto, RoomCheckTickDto } from './dto/ws-ticks.dt
 const THRESHOLDS = {
   noise_floor_threshold_dbfs: -40,
   snr_min_db: 20,
-  rms_target_range_db: [-18, -12] as [number, number],
+  rms_target_range_db: [-28, -16] as [number, number],
   clip_tolerance: 0,
   pitch_tolerance_cents: 15,
   window_agg_ms: 5000,
@@ -42,46 +42,51 @@ export class CalibrationsService {
       where: { id: dto.sessionId },
       data: { status },
     });
-    await this.prisma.calibrationMetric.create({
-      data: {
-        sessionId: dto.sessionId,
-        phase: 'room_check',
-        windowMs: Math.round(dto.durationSec * 1000),
-        baseLatencyMs: dto.baseLatencyMs,
-        avgRmsDb: dto.noiseFloorDbfs,
-        result: status === 'room_ok' ? 'OK' : 'Fail',
-      },
-    });
+    const roomData: any = {
+      sessionId: dto.sessionId,
+      phase: 'room_check',
+      windowMs: Math.round(dto.durationSec * 1000),
+      baseLatencyMs: dto.baseLatencyMs,
+      avgRmsDb: null, // ✅ Room check NO mide RMS de señal
+      stdRmsDb: null, // Room check no tiene stdRms
+      clipRate: null, // Room check no tiene clipRate
+      snrDb: null, // SNR no se calcula en room_check
+      noiseFloorDbfs: dto.noiseFloorDbfs, // ✅ Campo correcto para noise floor
+      result: status === 'room_ok' ? 'OK' : 'Fail',
+    };
+    await this.prisma.calibrationMetric.create({ data: roomData });
   }
 
   async gainTick(dto: GainTickDto) {
-    await this.prisma.calibrationMetric.create({
-      data: {
-        sessionId: dto.sessionId,
-        phase: 'gain',
-        windowMs: dto.windowMs,
-        avgRmsDb: dto.avgRmsDb,
-        stdRmsDb: dto.stdRmsDb,
-        clipRate: dto.clipRate,
-        result: 'OK',
-      },
-    });
+    const gainData: any = {
+      sessionId: dto.sessionId,
+      phase: 'gain',
+      windowMs: dto.windowMs,
+      avgRmsDb: dto.avgRmsDb,
+      stdRmsDb: dto.stdRmsDb,
+      clipRate: dto.clipRate,
+      snrDb: dto.snrDb ?? null, // ✅ SNR calculado si está disponible
+      baseLatencyMs: null, // Gain no mide latencia
+      noiseFloorDbfs: null, // ✅ No aplica en gain
+      result: 'OK',
+    };
+    await this.prisma.calibrationMetric.create({ data: gainData });
   }
 
   async metricsTick(dto: MetricsTickDto) {
-    await this.prisma.calibrationMetric.create({
-      data: {
-        sessionId: dto.sessionId,
-        phase: 'metrics',
-        windowMs: dto.windowMs,
-        avgRmsDb: dto.avgRmsDb,
-        stdRmsDb: dto.stdRmsDb,
-        clipRate: dto.clipRate,
-        snrDb: dto.snrDb,
-        baseLatencyMs: dto.baseLatencyMs,
-        result: dto.result,
-      },
-    });
+    const metricsData: any = {
+      sessionId: dto.sessionId,
+      phase: 'metrics',
+      windowMs: dto.windowMs,
+      avgRmsDb: dto.avgRmsDb, // ✅ RMS final de la señal
+      stdRmsDb: dto.stdRmsDb,
+      clipRate: dto.clipRate,
+      snrDb: dto.snrDb, // ✅ SNR calculado por el frontend
+      baseLatencyMs: dto.baseLatencyMs,
+      noiseFloorDbfs: dto.noiseFloorDbfs ?? null, // ✅ Noise floor consolidado
+      result: dto.result,
+    };
+    await this.prisma.calibrationMetric.create({ data: metricsData });
   }
 
   async finish(dto: FinishCalibrationDto) {

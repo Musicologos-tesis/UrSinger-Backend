@@ -13,6 +13,7 @@ export class GainTickDto {
   @IsNumber() avgRmsDb: number;
   @IsNumber() stdRmsDb: number;
   @IsNumber() clipRate: number;
+  @IsOptional() @IsNumber() snrDb?: number; // SNR calculado (señal vs noise floor)
 }
 
 export class MetricsTickDto {
@@ -23,5 +24,6 @@ export class MetricsTickDto {
   @IsNumber() clipRate: number;
   @IsOptional() @IsNumber() snrDb?: number;
   @IsOptional() @IsNumber() baseLatencyMs?: number;
+  @IsOptional() @IsNumber() noiseFloorDbfs?: number; // Del room_check para consolidación
   @IsOptional() @IsString() result?: 'OK' | 'Fail';
 }
