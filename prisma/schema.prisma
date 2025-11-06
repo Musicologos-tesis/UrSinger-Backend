@@ -53,3 +53,72 @@ model CalibrationMetric {
   result        String?  // OK | Fail
   timestamp     DateTime @default(now())
 }
+
+// ============================================
+// EVALUATION METRICS - Para entrenamiento ML
+// ============================================
+
+model EvaluationSession {
+  id                String   @id // Reusa sessionId de CalibrationSession
+  calibrationId     String   // Referencia al CalibrationSession
+  
+  // === RANGO VOCAL ===
+  rangeSpanSemitones Float?
+  rangeMinMidi       Float?
+  rangeMaxMidi       Float?
+  
+  // === ESTABILIDAD / PRECISIÓN / VIBRATO ===
+  precisionCents     Float?   // desviación promedio de la nota objetivo
+  stabilityCents     Float?   // desviación estándar (qué tan estable)
+  vibratoRateHz      Float?   // frecuencia del vibrato
+  vibratoDepthCents  Float?   // amplitud del vibrato
+  
+  // === POTENCIA / CONTROL DINÁMICO ===
+  meanRmsDb          Float?   // nivel promedio de señal (dBFS)
+  rmsConsistency     Float?   // desviación estándar de RMS (control)
+  powerIndex         Float?   // índice de control dinámico (0-1)
+  
+  // === MÉTRICAS ADICIONALES PARA ML ===
+  voiceType          String?  // soprano | alto | tenor | bass (auto-detectado)
+  tessituraCenterMidi Float?  // nota más cómoda/frecuente (MIDI)
+  spectralCentroid   Float?   // brillo del sonido en Hz (centro de masa espectral)
+  dynamicRangeDb     Float?   // diferencia entre momento más fuerte y más suave
+  registerShifts     Int?     // número de cambios de registro detectados
+  
+  // === CALIDAD DE SEÑAL (desde calibración) ===
+  snrDb              Float?   // Signal-to-Noise Ratio
+  rmsDb              Float?   // RMS de calibración
+  
+  // === RECOMENDACIÓN (por modelo ML) ===
+  recommendedRoute   String?  // CVT (Complete Vocal Technique) | EVM (Estill Voice Model)
+  routeConfidence    Float?   // confianza del modelo (0-1)
+  
+  status             String   @default("in_progress") // in_progress | finalized
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  exercises          ExerciseMetric[]
+}
+
+model ExerciseMetric {
+  id                String   @id @default(cuid())
+  sessionId         String
+  session           EvaluationSession @relation(fields: [sessionId], references: [id])
+  
+  exerciseType      String   // range | stability
+  attemptNumber     Int      @default(1)
+  
+  // Métricas específicas del ejercicio (JSON flexible)
+  // Para RANGO: { minMidi, maxMidi, spanSemitones }
+  // Para ESTABILIDAD: { precisionCents, stabilityCents, vibratoRateHz, vibratoDepthCents }
+  metricsData       Json
+  
+  // Potencia en este ejercicio
+  meanRmsDb         Float?
+  rmsConsistency    Float?
+  
+  durationSeconds   Float?
+  completedAt       DateTime @default(now())
+  
+  @@index([sessionId, exerciseType])
+}
