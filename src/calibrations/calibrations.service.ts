@@ -7,7 +7,7 @@ import { GainTickDto, MetricsTickDto, RoomCheckTickDto } from './dto/ws-ticks.dt
 const THRESHOLDS = {
   noise_floor_threshold_dbfs: -40,
   snr_min_db: 20,
-  rms_target_range_db: [-28, -16] as [number, number],
+  rms_target_range_db: [-33, -16] as [number, number],
   clip_tolerance: 0,
   pitch_tolerance_cents: 15,
   window_agg_ms: 5000,
