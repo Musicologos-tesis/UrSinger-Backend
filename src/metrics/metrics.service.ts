@@ -1,12 +1,46 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { LearningService } from '../learning/learning.service';
 import { RangeMetricsDto } from './dto/range-metrics.dto';
 import { StabilityMetricsDto } from './dto/stability-metrics.dto';
 import { FinalizeMetricsDto } from './dto/finalize-metrics.dto';
 
 @Injectable()
 export class MetricsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly learningService: LearningService,
+  ) {}
+
+  private determineRecommendedTechnique(metrics: {
+    rangeSpanSemitones?: number;
+    precisionCents?: number;
+    stabilityCents?: number;
+    powerIndex?: number;
+    voiceType?: string;
+  }): string {
+    // TODO: Implementar lógica real de ML
+    // Por ahora, una lógica simple basada en las métricas
+
+    // Si tiene buen control de estabilidad y potencia, sugerir CVT
+    if (
+      metrics.stabilityCents && metrics.stabilityCents < 50 &&
+      metrics.powerIndex && metrics.powerIndex > 0.7
+    ) {
+      return 'CVT';
+    }
+
+    // Si tiene buen rango y precisión pero menor potencia, sugerir EVM
+    if (
+      metrics.rangeSpanSemitones && metrics.rangeSpanSemitones > 24 &&
+      metrics.precisionCents && metrics.precisionCents < 30
+    ) {
+      return 'EVM';
+    }
+
+    // Por defecto, empezar con EVM que es más técnico
+    return 'EVM';
+  }
 
   /**
    * Registra métricas del ejercicio de RANGO VOCAL
@@ -211,12 +245,18 @@ export class MetricsService {
         ? Math.max(...exercisesWithDynamicRange.map((e) => (e.metricsData as any).dynamicRangeDb))
         : null;
 
-    // TODO: Calcular ruta recomendada con modelo ML (CVT o EVM)
-    // Por ahora se deja como null hasta que el modelo esté entrenado
-    const recommendedRoute = null;
-    const routeConfidence = null;
+    // Determinar la técnica vocal recomendada basada en las métricas
+    // TODO: Implementar modelo ML real
+    const recommendedRoute = this.determineRecommendedTechnique({
+      rangeSpanSemitones: rangeData?.rangeSpanSemitones ?? undefined,
+      precisionCents: stabilityData?.precisionCents ?? undefined,
+      stabilityCents: stabilityData?.stabilityCents ?? undefined,
+      powerIndex: powerIndex ?? undefined,
+      voiceType: voiceType ?? undefined,
+    });
 
-    // Actualizar EvaluationSession con datos consolidados
+    const routeConfidence = 0.85; // Valor temporal hasta implementar ML
+
     const finalizedSession = await this.prisma.evaluationSession.update({
       where: { id: dto.sessionId },
       data: {
@@ -247,13 +287,53 @@ export class MetricsService {
         snrDb: calibrationMetrics?.snrDb,
         rmsDb: calibrationMetrics?.avgRmsDb,
 
-        // RECOMENDACIÓN (null hasta que se implemente el modelo ML)
-        recommendedRoute: recommendedRoute,
-        routeConfidence: routeConfidence,
+        // RECOMENDACIÓN basada en métricas
+        recommendedRoute,
+        routeConfidence,
 
         status: 'finalized',
       },
     });
+
+    // Si tenemos una técnica recomendada, iniciar el proceso de aprendizaje
+    if (recommendedRoute) {
+      try {
+        const technique = await this.prisma.vocalTechnique.findFirst({
+          where: { name: recommendedRoute },
+        });
+
+        if (technique) {
+          // Crear el progreso inicial del estudiante
+          const firstLesson = await this.prisma.vocalLesson.findFirst({
+            where: { 
+              techniqueId: technique.id,
+              level: 1,
+              orderIndex: 1 
+            },
+          });
+
+          if (firstLesson) {
+            await this.prisma.studentProgress.create({
+              data: {
+                userId: dto.userId,
+                evaluationId: dto.sessionId,
+                techniqueId: technique.id,
+                lessonId: firstLesson.id,
+                status: 'not_started',
+                metrics: {
+                  initialAccuracy: stabilityData?.precisionCents,
+                  initialStability: stabilityData?.stabilityCents,
+                  initialRange: rangeData?.rangeSpanSemitones,
+                },
+              },
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing learning path:', error);
+        // No interrumpimos el flujo si hay error en la inicialización del aprendizaje
+      }
+    }
 
     return {
       success: true,

@@ -122,3 +122,139 @@ model ExerciseMetric {
   
   @@index([sessionId, exerciseType])
 }
+
+// ============================================
+// LEARNING MODELS - Módulo de aprendizaje
+// ============================================
+
+model VocalTechnique {
+  id          String   @id @default(cuid())
+  name        String   @unique // "CVT" | "EVM"
+  description String
+  exercises   VocalExercise[]
+  lessons     VocalLesson[]
+  students    StudentProgress[]
+  createdAt   DateTime @default(now())
+}
+
+model VocalLesson {
+  id              String   @id @default(cuid())
+  techniqueId     String
+  technique       VocalTechnique @relation(fields: [techniqueId], references: [id])
+  title           String
+  description     String
+  level           Int      // 1: Beginner, 2: Intermediate, 3: Advanced
+  orderIndex      Int      // Orden en la secuencia de aprendizaje
+  prerequisites   String[] // IDs de lecciones previas requeridas
+  
+  // Campos específicos por técnica
+  techniqueMode   String   // CVT: "neutral" | "curbing" | "overdrive" | "edge"
+                          // EVM: "speech" | "sob" | "twang" | "belt" | "opera"
+  
+  // Objetivos de aprendizaje
+  pitchRange     Json     // { minMidi: number, maxMidi: number }
+  dynamicRange   Json     // { minDb: number, maxDb: number }
+  
+  exercises      LessonExercise[]
+  progress       StudentProgress[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([techniqueId, orderIndex])
+}
+
+model VocalExercise {
+  id            String   @id @default(cuid())
+  techniqueId   String
+  technique     VocalTechnique @relation(fields: [techniqueId], references: [id])
+  name          String
+  description   String
+  duration      Int      // Duración en segundos
+  difficulty    Int      // 1-5
+  
+  // Parámetros técnicos
+  pitchRange    Json    // { minMidi: number, maxMidi: number }
+  dynamicRange  Json    // { minDb: number, maxDb: number }
+  
+  // Objetivos específicos
+  targetMetrics Json    // {
+                       //   pitchAccuracy: number,    // cents de precisión requerida
+                       //   stability: number,         // variación máxima permitida
+                       //   vibratoRate?: number,     // Hz objetivo para vibrato
+                       //   vibratoDepth?: number     // cents objetivo para vibrato
+                       // }
+  
+  // Contenido del ejercicio
+  audioUrl      String?  // URL del audio de ejemplo/guía
+  sheetMusic    String?  // URL de la partitura (si aplica)
+  instructions  String   // Instrucciones detalladas
+  
+  lessons       LessonExercise[]
+  attempts      ExerciseAttempt[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model LessonExercise {
+  id          String   @id @default(cuid())
+  lessonId    String
+  lesson      VocalLesson @relation(fields: [lessonId], references: [id])
+  exerciseId  String
+  exercise    VocalExercise @relation(fields: [exerciseId], references: [id])
+  orderIndex  Int      // Orden en la lección
+  required    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([lessonId, orderIndex])
+}
+
+model StudentProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  evaluationId String  // Referencia a EvaluationSession
+  techniqueId String
+  technique   VocalTechnique @relation(fields: [techniqueId], references: [id])
+  lessonId    String
+  lesson      VocalLesson @relation(fields: [lessonId], references: [id])
+  status      String   // "not_started" | "in_progress" | "completed"
+  score       Float?   // 0-100
+  attempts    ExerciseAttempt[]
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  // Métricas de progreso
+  metrics     Json?    // {
+                      //   averageAccuracy: number,
+                      //   consistencyScore: number,
+                      //   techniqueMastery: number
+                      // }
+
+  @@unique([userId, lessonId])
+}
+
+model ExerciseAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  exerciseId  String
+  exercise    VocalExercise @relation(fields: [exerciseId], references: [id])
+  progressId  String
+  progress    StudentProgress @relation(fields: [progressId], references: [id])
+  
+  // Métricas de rendimiento
+  pitchAccuracy   Float?   // Precisión en cents
+  stability       Float?   // Estabilidad de la nota
+  vibratoRate     Float?   // Tasa de vibrato en Hz
+  vibratoDepth    Float?   // Profundidad del vibrato en cents
+  dynamicControl  Float?   // Control del volumen
+  
+  // Análisis técnico
+  techniqueScore  Float?   // Puntuación específica de la técnica
+  feedback        Json?    // Retroalimentación detallada
+  
+  audioUrl       String?  // URL del audio grabado
+  createdAt      DateTime @default(now())
+  duration       Int      // Duración en segundos
+  completed      Boolean  @default(false)
+
+  @@index([userId, exerciseId])
+}
