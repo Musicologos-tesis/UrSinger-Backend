@@ -1,284 +1,178 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RangeMetricsDto } from './dto/range-metrics.dto';
-import { StabilityMetricsDto } from './dto/stability-metrics.dto';
-import { FinalizeMetricsDto } from './dto/finalize-metrics.dto';
+import { EvaluationMetricsDto } from './dto/evaluation-metrics.dto';
 
 @Injectable()
 export class MetricsService {
+  private readonly ML_SERVICE_URL = 'http://localhost:8000';
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Registra métricas del ejercicio de RANGO VOCAL
+   * Recibe métricas completas del frontend y consulta el modelo ML
    */
-  async submitRange(dto: RangeMetricsDto) {
-    // Verificar que existe la sesión de calibración
-    const calibrationSession = await this.prisma.calibrationSession.findUnique({
-      where: { id: dto.sessionId },
+  async predictVocalRoute(dto: EvaluationMetricsDto) {
+    // Verificar que la calibración existe
+    const calibration = await this.prisma.calibration.findUnique({
+      where: { sessionId: dto.sessionId },
     });
 
-    if (!calibrationSession) {
-      throw new NotFoundException(`Calibration session ${dto.sessionId} not found`);
+    if (!calibration) {
+      throw new NotFoundException(`Calibration ${dto.sessionId} not found`);
     }
 
-    // Crear o verificar que existe la EvaluationSession
-    let evalSession = await this.prisma.evaluationSession.findUnique({
-      where: { id: dto.sessionId },
+    // Verificar que el perfil existe
+    const profile = await this.prisma.userProfile.findUnique({
+      where: { id: dto.profileId },
     });
 
-    if (!evalSession) {
-      evalSession = await this.prisma.evaluationSession.create({
-        data: {
-          id: dto.sessionId,
-          calibrationId: dto.sessionId,
-          status: 'in_progress',
-        },
-      });
+    if (!profile) {
+      throw new NotFoundException(`Profile ${dto.profileId} not found`);
     }
 
-    // Contar intentos previos de este ejercicio
-    const attemptCount = await this.prisma.exerciseMetric.count({
-      where: { sessionId: dto.sessionId, exerciseType: 'range' },
-    });
+    try {
+      // Verificar salud del servicio ML
+      const healthResponse = await fetch(`${this.ML_SERVICE_URL}/health`);
+      if (!healthResponse.ok) {
+        throw new HttpException('ML service is not available', HttpStatus.SERVICE_UNAVAILABLE);
+      }
 
-    // Crear el registro del ejercicio
-    const exercise = await this.prisma.exerciseMetric.create({
-      data: {
-        sessionId: dto.sessionId,
-        exerciseType: 'range',
-        attemptNumber: attemptCount + 1,
-        metricsData: {
-          rangeSpanSemitones: dto.rangeSpanSemitones,
-          rangeMinMidi: dto.rangeMinMidi,
-          rangeMaxMidi: dto.rangeMaxMidi,
-          // Nuevas métricas ML
-          voiceType: dto.voiceType,
-          tessituraCenterMidi: dto.tessituraCenterMidi,
-          spectralCentroid: dto.spectralCentroid,
-          dynamicRangeDb: dto.dynamicRangeDb,
-          registerShifts: dto.registerShifts,
-        },
+      // Preparar payload para el modelo ML
+      const mlPayload = {
+        gender: dto.gender,
         meanRmsDb: dto.meanRmsDb,
         rmsConsistency: dto.rmsConsistency,
-        durationSeconds: dto.durationSeconds,
-      },
-    });
+        dynamicRangeDb: dto.dynamicRangeDb,
+        durationSec: dto.durationSec,
+        precisionCents: dto.precisionCents,
+        stabilityCents: dto.stabilityCents,
+        rangeMinMidi: dto.rangeMinMidi,
+        rangeMaxMidi: dto.rangeMaxMidi,
+        rangeSpanSemitones: dto.rangeSpanSemitones,
+        attackLatencyMs: dto.attackLatencyMs,
+      };
 
-    return {
-      success: true,
-      exerciseId: exercise.id,
-      attemptNumber: exercise.attemptNumber,
-      message: 'Range metrics registered successfully',
-    };
-  }
-
-  /**
-   * Registra métricas del ejercicio de ESTABILIDAD
-   */
-  async submitStability(dto: StabilityMetricsDto) {
-    // Verificar que existe la sesión de calibración
-    const calibrationSession = await this.prisma.calibrationSession.findUnique({
-      where: { id: dto.sessionId },
-    });
-
-    if (!calibrationSession) {
-      throw new NotFoundException(`Calibration session ${dto.sessionId} not found`);
-    }
-
-    // Crear o verificar que existe la EvaluationSession
-    let evalSession = await this.prisma.evaluationSession.findUnique({
-      where: { id: dto.sessionId },
-    });
-
-    if (!evalSession) {
-      evalSession = await this.prisma.evaluationSession.create({
-        data: {
-          id: dto.sessionId,
-          calibrationId: dto.sessionId,
-          status: 'in_progress',
+      // Llamar al endpoint de predicción
+      const predictResponse = await fetch(`${this.ML_SERVICE_URL}/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify(mlPayload),
       });
-    }
 
-    // Contar intentos previos de este ejercicio
-    const attemptCount = await this.prisma.exerciseMetric.count({
-      where: { sessionId: dto.sessionId, exerciseType: 'stability' },
-    });
+      if (!predictResponse.ok) {
+        const errorData = await predictResponse.json();
+        throw new HttpException(
+          `ML prediction failed: ${errorData.message || 'Unknown error'}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
 
-    // Crear el registro del ejercicio
-    const exercise = await this.prisma.exerciseMetric.create({
-      data: {
-        sessionId: dto.sessionId,
-        exerciseType: 'stability',
-        attemptNumber: attemptCount + 1,
-        metricsData: {
+      const prediction = await predictResponse.json();
+
+      // Log para debugging
+      console.log('ML Service Response:', JSON.stringify(prediction, null, 2));
+
+      // Interpretar respuesta del ML
+      const weaknessesDetected = prediction.weaknesses_detected || [];
+      const totalWeaknesses = prediction.total_weaknesses || 0;
+      const confidenceScores = prediction.confidence_scores || {};
+
+      // Guardar la evaluación en la base de datos (upsert si ya existe)
+      const evaluation = await this.prisma.evaluation.upsert({
+        where: { sessionId: dto.sessionId },
+        update: {
+          // Métricas de volumen
+          meanRmsDb: dto.meanRmsDb,
+          rmsConsistency: dto.rmsConsistency,
+          dynamicRangeDb: dto.dynamicRangeDb,
+          durationSec: dto.durationSec,
+
+          // Métricas de afinación
           precisionCents: dto.precisionCents,
           stabilityCents: dto.stabilityCents,
-          vibratoRateHz: dto.vibratoRateHz,
-          vibratoDepthCents: dto.vibratoDepthCents,
-          // Métricas ML aplicables a estabilidad
-          spectralCentroid: dto.spectralCentroid,
+
+          // Métricas de rango
+          rangeMinMidi: dto.rangeMinMidi,
+          rangeMaxMidi: dto.rangeMaxMidi,
+          rangeSpanSemitones: dto.rangeSpanSemitones,
+          attackLatencyMs: dto.attackLatencyMs,
+
+          // Análisis del modelo ML
+          weaknessesDetected,
+          totalWeaknesses,
+          confidenceScores,
+        },
+        create: {
+          profileId: dto.profileId,
+          sessionId: dto.sessionId,
+
+          // Métricas de volumen
+          meanRmsDb: dto.meanRmsDb,
+          rmsConsistency: dto.rmsConsistency,
           dynamicRangeDb: dto.dynamicRangeDb,
+          durationSec: dto.durationSec,
+
+          // Métricas de afinación
+          precisionCents: dto.precisionCents,
+          stabilityCents: dto.stabilityCents,
+
+          // Métricas de rango
+          rangeMinMidi: dto.rangeMinMidi,
+          rangeMaxMidi: dto.rangeMaxMidi,
+          rangeSpanSemitones: dto.rangeSpanSemitones,
+          attackLatencyMs: dto.attackLatencyMs,
+
+          // Análisis del modelo ML
+          weaknessesDetected,
+          totalWeaknesses,
+          confidenceScores,
         },
-        meanRmsDb: dto.meanRmsDb,
-        rmsConsistency: dto.rmsConsistency,
-        durationSeconds: dto.durationSeconds,
-      },
-    });
+      });
 
-    return {
-      success: true,
-      exerciseId: exercise.id,
-      attemptNumber: exercise.attemptNumber,
-      message: 'Stability metrics registered successfully',
-    };
-  }
+      // Formatear grupos para respuesta amigable
+      const weaknessGroups = weaknessesDetected.map((w: string) => w.replace('weak_', ''));
 
-  /**
-   * Finaliza la evaluación, consolida métricas y calcula ruta recomendada
-   */
-  async finalize(dto: FinalizeMetricsDto) {
-    const evalSession = await this.prisma.evaluationSession.findUnique({
-      where: { id: dto.sessionId },
-      include: { exercises: true },
-    });
-
-    if (!evalSession) {
-      throw new NotFoundException(`Evaluation session ${dto.sessionId} not found`);
-    }
-
-    if (evalSession.status === 'finalized') {
-      throw new BadRequestException('Evaluation session already finalized');
-    }
-
-    // Obtener métricas de calibración (SNR y RMS)
-    const calibrationMetrics = await this.prisma.calibrationMetric.findFirst({
-      where: {
+      return {
+        success: true,
         sessionId: dto.sessionId,
-        phase: 'metrics',
-      },
-      orderBy: { timestamp: 'desc' },
-    });
+        profileId: dto.profileId,
+        weaknessAnalysis: {
+          groups: weaknessGroups,
+          total: totalWeaknesses,
+          message:
+            totalWeaknesses > 0
+              ? `Se detectaron carencias en los grupos: ${weaknessGroups.join(', ')}`
+              : 'No se detectaron carencias significativas',
+          confidence: confidenceScores,
+        },
+        createdAt: evaluation.createdAt,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
 
-    // Consolidar métricas de ejercicios
-    const rangeExercises = evalSession.exercises.filter((e) => e.exerciseType === 'range');
-    const stabilityExercises = evalSession.exercises.filter((e) => e.exerciseType === 'stability');
-
-    // Promediar métricas de RANGO (usar el último intento o promedio)
-    const lastRange = rangeExercises[rangeExercises.length - 1];
-    const rangeData = lastRange?.metricsData as any;
-
-    // Promediar métricas de ESTABILIDAD
-    const lastStability = stabilityExercises[stabilityExercises.length - 1];
-    const stabilityData = lastStability?.metricsData as any;
-
-    // Calcular potencia promedio de todos los ejercicios
-    const allExercises = evalSession.exercises;
-    const meanRmsDb =
-      allExercises.length > 0
-        ? allExercises.reduce((sum, e) => sum + (e.meanRmsDb || 0), 0) / allExercises.length
-        : null;
-
-    const rmsConsistency =
-      allExercises.length > 0
-        ? allExercises.reduce((sum, e) => sum + (e.rmsConsistency || 0), 0) / allExercises.length
-        : null;
-
-    // Calcular powerIndex (0-1) basado en consistencia
-    const powerIndex = rmsConsistency !== null ? Math.max(0, 1 - rmsConsistency / 10) : null;
-
-    // Consolidar nuevas métricas ML
-    // voiceType, tessituraCenterMidi y registerShifts solo del ejercicio de RANGO
-    const voiceType = rangeData?.voiceType || null;
-    const tessituraCenterMidi = rangeData?.tessituraCenterMidi || null;
-    const registerShifts = rangeData?.registerShifts || null;
-
-    // spectralCentroid y dynamicRangeDb: promediar de todos los ejercicios que los tengan
-    const exercisesWithSpectral = allExercises.filter(
-      (e) => e.metricsData && (e.metricsData as any).spectralCentroid,
-    );
-    const spectralCentroid =
-      exercisesWithSpectral.length > 0
-        ? exercisesWithSpectral.reduce((sum, e) => sum + (e.metricsData as any).spectralCentroid, 0) /
-          exercisesWithSpectral.length
-        : null;
-
-    const exercisesWithDynamicRange = allExercises.filter(
-      (e) => e.metricsData && (e.metricsData as any).dynamicRangeDb,
-    );
-    const dynamicRangeDb =
-      exercisesWithDynamicRange.length > 0
-        ? Math.max(...exercisesWithDynamicRange.map((e) => (e.metricsData as any).dynamicRangeDb))
-        : null;
-
-    // TODO: Calcular ruta recomendada con modelo ML (CVT o EVM)
-    // Por ahora se deja como null hasta que el modelo esté entrenado
-    const recommendedRoute = null;
-    const routeConfidence = null;
-
-    // Actualizar EvaluationSession con datos consolidados
-    const finalizedSession = await this.prisma.evaluationSession.update({
-      where: { id: dto.sessionId },
-      data: {
-        // RANGO
-        rangeSpanSemitones: rangeData?.rangeSpanSemitones,
-        rangeMinMidi: rangeData?.rangeMinMidi,
-        rangeMaxMidi: rangeData?.rangeMaxMidi,
-
-        // ESTABILIDAD
-        precisionCents: stabilityData?.precisionCents,
-        stabilityCents: stabilityData?.stabilityCents,
-        vibratoRateHz: stabilityData?.vibratoRateHz,
-        vibratoDepthCents: stabilityData?.vibratoDepthCents,
-
-        // POTENCIA
-        meanRmsDb,
-        rmsConsistency,
-        powerIndex,
-
-        // NUEVAS MÉTRICAS ML
-        voiceType,
-        tessituraCenterMidi,
-        spectralCentroid,
-        dynamicRangeDb,
-        registerShifts,
-
-        // CALIDAD DE SEÑAL (de calibración)
-        snrDb: calibrationMetrics?.snrDb,
-        rmsDb: calibrationMetrics?.avgRmsDb,
-
-        // RECOMENDACIÓN (null hasta que se implemente el modelo ML)
-        recommendedRoute: recommendedRoute,
-        routeConfidence: routeConfidence,
-
-        status: 'finalized',
-      },
-    });
-
-    return {
-      success: true,
-      evaluationSession: finalizedSession,
-      message: 'Evaluation finalized successfully',
-    };
+      throw new HttpException(
+        `Failed to connect to ML service: ${error.message}`,
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
   }
 
   /**
-   * Obtiene el consolidado de una sesión
+   * Obtiene una evaluación por sessionId
    */
-  async getConsolidated(sessionId: string) {
-    const evalSession = await this.prisma.evaluationSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        exercises: {
-          orderBy: { completedAt: 'asc' },
-        },
-      },
+  async getEvaluation(sessionId: string) {
+    const evaluation = await this.prisma.evaluation.findUnique({
+      where: { sessionId },
     });
 
-    if (!evalSession) {
-      throw new NotFoundException(`Evaluation session ${sessionId} not found`);
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation ${sessionId} not found`);
     }
 
-    return evalSession;
+    return evaluation;
   }
 }

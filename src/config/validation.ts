@@ -5,4 +5,6 @@ export const validationSchema = Joi.object({
   PORT: Joi.number().default(3000),
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
   CORS_ORIGIN: Joi.string().required(),
+  JWT_SECRET: Joi.string().default('ursinger-secret-key-change-in-production'),
+  JWT_EXPIRES_IN: Joi.string().default('7d'),
 });
