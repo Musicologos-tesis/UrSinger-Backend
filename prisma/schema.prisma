@@ -45,6 +45,7 @@ model UserProfile {
   
   calibrations        Calibration[]
   evaluations         Evaluation[]
+  trainingPlans       TrainingPlan[]
   
   @@index([userId])
 }
@@ -108,6 +109,104 @@ model Evaluation {
   
   createdAt         DateTime @default(now())
   
+  trainingPlans     TrainingPlan[]
+  
   @@index([profileId])
   @@index([sessionId])
+}
+
+// ============================================
+// EJERCICIOS Y GRUPOS DE ENTRENAMIENTO
+// ============================================
+
+model ExerciseGroup {
+  id          Int    @id @default(autoincrement())
+  groupNumber Int    @unique // 1-5 (G1-G5)
+  name        String // "Soporte respiratorio y control del aire"
+  objective   String // Descripción del objetivo del grupo
+  rationale   String @db.Text // Sustento CVT/EVM
+  
+  exercises   Exercise[]
+  
+  @@index([groupNumber])
+}
+
+model Exercise {
+  id              Int    @id @default(autoincrement())
+  groupId         Int
+  group           ExerciseGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  exerciseNumber  Int    // Número dentro del grupo (1, 2, 3...)
+  name            String // "Breath Flow Hold"
+  rationale       String // "CVT (Support) + EVM (Flow)"
+  objective       String // "Mantener una nota sostenida a volumen estable"
+  instructions    String @db.Text // Instrucciones detalladas
+  
+  levels          ExerciseLevel[]
+  
+  @@unique([groupId, exerciseNumber])
+  @@index([groupId])
+}
+
+model ExerciseLevel {
+  id          Int    @id @default(autoincrement())
+  exerciseId  Int
+  exercise    Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  
+  level       Int    // 1 o 2
+  description String // "Mantén la nota por 3 segundos."
+  videoUrl    String? // null por ahora
+  
+  planExercises TrainingPlanExercise[]
+  
+  @@unique([exerciseId, level])
+  @@index([exerciseId])
+}
+
+// ============================================
+// PLANES DE ENTRENAMIENTO Y PROGRESO
+// ============================================
+
+model TrainingPlan {
+  id            String   @id @default(cuid())
+  profileId     String
+  profile       UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  evaluationId  String
+  evaluation    Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  
+  startDate     DateTime @default(now())
+  endDate       DateTime // startDate + 4 semanas
+  frequency     Int      // 3 días por semana (MVP)
+  focusGroups   Int[]    // [4, 2] - Grupos con debilidades
+  
+  status        String   @default("active") // active, completed, replaced
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  exercises     TrainingPlanExercise[]
+  
+  @@index([profileId, status])
+  @@index([evaluationId])
+}
+
+model TrainingPlanExercise {
+  id              String   @id @default(cuid())
+  planId          String
+  plan            TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  
+  exerciseLevelId Int
+  exerciseLevel   ExerciseLevel @relation(fields: [exerciseLevelId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek       Int      // 1=Lunes, 3=Miércoles, 5=Viernes
+  orderInDay      Int      // 0, 1, 2 (orden dentro del día)
+  
+  completionCount Int      @default(0) // 0-4 (cuántas veces se completó en las 4 semanas)
+  completedDates  DateTime[] // Array de fechas cuando se completó
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([planId, dayOfWeek])
+  @@index([planId, completionCount])
 }

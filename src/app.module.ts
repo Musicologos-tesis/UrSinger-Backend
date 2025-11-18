@@ -6,6 +6,7 @@ import { CalibrationsModule } from './calibrations/calibrations.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
+import { TrainingPlansModule } from './training-plans/training-plans.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ProfileModule } from './profile/profile.module';
     ProfileModule,
     CalibrationsModule,
     MetricsModule,
+    TrainingPlansModule,
   ],
 })
 export class AppModule {}
