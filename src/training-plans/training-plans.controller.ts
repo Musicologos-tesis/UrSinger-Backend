@@ -119,4 +119,41 @@ export class TrainingPlansController {
   async getProgress(@Param('profileId') profileId: string) {
     return this.trainingPlansService.getProgress(profileId);
   }
+
+  @Get('exercise/:planExerciseId')
+  @ApiOperation({
+    summary: 'Obtener un ejercicio específico del plan',
+    description: 'Obtiene los detalles completos de un ejercicio del plan de entrenamiento, incluyendo CVT y EVM.',
+  })
+  @ApiParam({ name: 'planExerciseId', description: 'ID del ejercicio en el plan' })
+  @ApiResponse({
+    status: 200,
+    description: 'Ejercicio encontrado',
+    schema: {
+      example: {
+        planExerciseId: 'clxyz123',
+        exerciseLevelId: 10,
+        exerciseId: 5,
+        exerciseName: 'Single Burst',
+        groupNumber: 4,
+        groupName: 'Potencia y control dinámico',
+        level: 1,
+        description: 'Emisión fuerte de 3 s en nota media.',
+        instructions: 'UrSinger da una nota guía. El usuario la emite con un ataque energético...',
+        videoUrl: null,
+        cvtDescription: 'Twang/Overdrive: Modos vocales que permiten proyección potente sin tensión.',
+        evmDescription: null,
+        completionCount: 2,
+        completedDates: ['2025-11-17T19:00:00.000Z', '2025-11-24T19:00:00.000Z'],
+        isCompletedThisWeek: true,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Ejercicio no encontrado',
+  })
+  async getExercise(@Param('planExerciseId') planExerciseId: string) {
+    return this.trainingPlansService.getExercise(planExerciseId);
+  }
 }

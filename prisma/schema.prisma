@@ -139,6 +139,8 @@ model Exercise {
   exerciseNumber  Int    // Número dentro del grupo (1, 2, 3...)
   name            String // "Breath Flow Hold"
   rationale       String // "CVT (Support) + EVM (Flow)"
+  cvtDescription  String? @db.Text // Descripción del sustento CVT
+  evmDescription  String? @db.Text // Descripción del sustento EVM
   objective       String // "Mantener una nota sostenida a volumen estable"
   instructions    String @db.Text // Instrucciones detalladas
   
