@@ -5,6 +5,15 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding exercises...');
 
+  // Limpiar datos existentes
+  console.log('🧹 Cleaning existing data...');
+  await prisma.trainingPlanExercise.deleteMany({});
+  await prisma.trainingPlan.deleteMany({});
+  await prisma.exerciseLevel.deleteMany({});
+  await prisma.exercise.deleteMany({});
+  await prisma.exerciseGroup.deleteMany({});
+  console.log('✅ Cleaned successfully!');
+
   // Grupo 1: Soporte respiratorio y control del aire
   const group1 = await prisma.exerciseGroup.create({
     data: {
@@ -18,6 +27,8 @@ async function main() {
             exerciseNumber: 1,
             name: 'Breath Flow Hold',
             rationale: 'CVT (Support) + EVM (Flow)',
+            cvtDescription: 'Support: Uso activo del cuerpo para sostener la voz con apoyo diafragmático constante.',
+            evmDescription: 'Flow: Mantener un flujo de aire constante y equilibrado durante la emisión sostenida.',
             objective: 'Mantener una nota sostenida a volumen estable',
             instructions: 'El usuario elige una nota cómoda ("Ah") y la sostiene intentando mantener el volumen lo más parejo posible.',
             levels: {
@@ -31,6 +42,8 @@ async function main() {
             exerciseNumber: 2,
             name: 'S–Z Balance',
             rationale: 'EVM (Flow)',
+            cvtDescription: null,
+            evmDescription: 'Flow: Comparar el flujo de aire sin voz (S) con el flujo con voz (Z) para evaluar eficiencia vocal.',
             objective: 'Controlar el flujo de aire comparando la duración del sonido "S" (aire) con "Z" (voz).',
             instructions: 'Emitir "ssss" hasta agotar el aire. Luego emitir "zzzz" buscando igualar la duración. UrSinger mide consistencia y duración.',
             levels: {
@@ -44,6 +57,8 @@ async function main() {
             exerciseNumber: 3,
             name: 'Dynamic Wave',
             rationale: 'CVT (Metal Control)',
+            cvtDescription: 'Metal Control: Mantener control del flujo durante cambios de volumen sin perder claridad vocal.',
+            evmDescription: null,
             objective: 'Mantener control del flujo durante cambios suaves de volumen',
             instructions: 'Emitir una vocal "Ah" a una nota cómoda, comenzando suave, subiendo ligeramente el volumen, y luego volviendo al volumen inicial.',
             levels: {
@@ -71,6 +86,8 @@ async function main() {
             exerciseNumber: 1,
             name: 'Pitch Target',
             rationale: 'EVM (Onset)',
+            cvtDescription: null,
+            evmDescription: 'Onset: Coordinación precisa entre el inicio del flujo de aire y la activación de las cuerdas vocales.',
             objective: 'Coincidir la nota emitida con una referencia que UrSinger reproduce (tono guía).',
             instructions: 'El sistema reproduce una nota (por ejemplo, A3). El usuario debe cantarla intentando igualar el tono lo más posible.',
             levels: {
@@ -84,6 +101,8 @@ async function main() {
             exerciseNumber: 2,
             name: 'Pitch Steps',
             rationale: 'CVT (Neutral) + EVM (Pitch memory)',
+            cvtDescription: 'Neutral: Emisión libre y relajada que permite cambios de pitch sin tensión laríngea.',
+            evmDescription: 'Pitch Memory: Capacidad de reproducir intervalos precisos entre notas consecutivas.',
             objective: 'Mejorar la precisión al moverse entre notas (intervalos simples).',
             instructions: 'UrSinger toca dos notas consecutivas (por ejemplo, C4 → E4). El usuario repite intentando mantener la relación exacta entre ambas.',
             levels: {
@@ -97,6 +116,8 @@ async function main() {
             exerciseNumber: 3,
             name: 'Pitch Glide',
             rationale: 'CVT (Neutral flow) + EVM (Pitch glide)',
+            cvtDescription: 'Neutral Flow: Mantener el modo neutro durante todo el deslizamiento tonal.',
+            evmDescription: 'Pitch Glide: Transiciones continuas y suaves entre diferentes alturas tonales.',
             objective: 'Lograr transiciones suaves y controladas entre notas sin saltos bruscos.',
             instructions: 'El usuario emite una vocal "oo" o "ee", deslizando la voz desde una nota baja hasta una alta y regresando. UrSinger mide la suavidad y continuidad del cambio tonal.',
             levels: {
@@ -124,6 +145,8 @@ async function main() {
             exerciseNumber: 1,
             name: 'Steady Tone',
             rationale: 'CVT (Neutral) + EVM (Anchoring)',
+            cvtDescription: 'Neutral: Modo vocal que permite estabilidad tonal sin tensión laríngea.',
+            evmDescription: 'Anchoring: Estabilización de la laringe para mantener pitch constante.',
             objective: 'Mantener una nota sin que varíe su afinación más de lo necesario.',
             instructions: 'El usuario elige una nota cómoda y la sostiene intentando evitar cualquier temblor o vibrato.',
             levels: {
@@ -137,6 +160,8 @@ async function main() {
             exerciseNumber: 2,
             name: 'Controlled vibrato',
             rationale: 'EVM (Anchoring + Onset control)',
+            cvtDescription: null,
+            evmDescription: 'Anchoring + Onset Control: Oscilaciones regulares del pitch mediante control muscular fino.',
             objective: 'Generar vibrato de forma controlada, regular y sin perder afinación base.',
             instructions: 'El usuario sostiene una nota y aplica un vibrato suave (oscilaciones de tono naturales, no forzadas). UrSinger analiza su regularidad.',
             levels: {
@@ -150,6 +175,8 @@ async function main() {
             exerciseNumber: 3,
             name: 'Clean onset',
             rationale: 'CVT (Avoid constriction) + EVM (True Vocal Fold Onset)',
+            cvtDescription: 'Avoid Constriction: Inicio de nota sin tensión ni constricción faríngea.',
+            evmDescription: 'True Vocal Fold Onset: Activación precisa de las cuerdas vocales desde el primer momento.',
             objective: 'Entrenar la precisión al iniciar una nota sin ataques bruscos ni retrasos en la afinación.',
             instructions: 'UrSinger da una nota guía → el usuario la emite intentando empezar directamente en el tono correcto.',
             levels: {
@@ -177,6 +204,8 @@ async function main() {
             exerciseNumber: 1,
             name: 'Single Burst',
             rationale: 'CVT (Twang/Overdrive)',
+            cvtDescription: 'Twang/Overdrive: Modos vocales que permiten proyección potente sin tensión.',
+            evmDescription: null,
             objective: 'Ejecutar una nota breve con proyección firme y controlada, evitando saturación o tensión.',
             instructions: 'UrSinger da una nota guía. El usuario la emite con un ataque energético (como un "¡HEY!"), manteniendo 1 segundo de potencia estable.',
             levels: {
@@ -190,6 +219,8 @@ async function main() {
             exerciseNumber: 2,
             name: 'Volume Rise',
             rationale: 'EVM (Source–Filter Balance) + CVT (Metal Control)',
+            cvtDescription: 'Metal Control: Mantener claridad vocal durante aumento de volumen.',
+            evmDescription: 'Source-Filter Balance: Equilibrio entre la fuente (cuerdas vocales) y el filtro (tracto vocal).',
             objective: 'Aumentar gradualmente el volumen manteniendo el tono estable.',
             instructions: 'El usuario mantiene una vocal "Ah", comenzando suave y aumentando volumen uniformemente hasta el final del tiempo.',
             levels: {
@@ -203,6 +234,8 @@ async function main() {
             exerciseNumber: 3,
             name: 'Loud–Soft Alternance',
             rationale: 'CVT (Twang + Metal Control) + EVM (Anchoring)',
+            cvtDescription: 'Twang + Metal Control: Cambios dinámicos manteniendo claridad y eficiencia vocal.',
+            evmDescription: 'Anchoring: Estabilización laríngea durante cambios de volumen.',
             objective: 'Cambiar rápidamente entre voz suave y fuerte sin perder tono ni calidad.',
             instructions: 'El usuario alterna una vocal entre "suave → fuerte → suave" sin cambiar la nota.',
             levels: {
@@ -230,6 +263,8 @@ async function main() {
             exerciseNumber: 1,
             name: 'Vocal glide',
             rationale: 'CVT (Edge) + EVM (Pitch Glide)',
+            cvtDescription: 'Edge: Modo vocal que facilita transiciones entre registros sin quiebres.',
+            evmDescription: 'Pitch Glide: Deslizamiento continuo del pitch a través de diferentes registros.',
             objective: 'Deslizar la voz de una nota baja a una alta (y viceversa) sin quiebres de registro.',
             instructions: 'El usuario hace una sirena con una vocal cómoda ("oo" o "ee"), desde su nota más baja hasta la más alta posible y regresa, sin forzar.',
             levels: {
@@ -243,6 +278,8 @@ async function main() {
             exerciseNumber: 2,
             name: 'Step Expansion',
             rationale: 'EVM (CT–TA Balance)',
+            cvtDescription: null,
+            evmDescription: 'CT-TA Balance: Equilibrio entre los músculos cricotiroides (agudos) y tiroaritenoideos (graves).',
             objective: 'Cantar una secuencia de notas ascendentes y descendentes controlando el paso entre registros.',
             instructions: 'UrSinger reproduce una escala corta (3–5 notas). El usuario la repite manteniendo el mismo color y volumen en cada nota.',
             levels: {
@@ -256,6 +293,8 @@ async function main() {
             exerciseNumber: 3,
             name: 'Mix coordination',
             rationale: 'CVT (Curbing) + EVM (Anchoring + CT–TA Balance)',
+            cvtDescription: 'Curbing: Modo vocal que facilita el registro mixto entre voz de pecho y cabeza.',
+            evmDescription: 'Anchoring + CT-TA Balance: Coordinación muscular para transiciones suaves entre registros.',
             objective: 'Entrenar la transición entre voz de pecho y voz de cabeza (registro mixto) sin quiebre ni pérdida de potencia.',
             instructions: 'El usuario emite una sirena corta ("ah") pasando por la zona de mezcla (ej.: E4–A4) intentando mantener el mismo color de voz.',
             levels: {

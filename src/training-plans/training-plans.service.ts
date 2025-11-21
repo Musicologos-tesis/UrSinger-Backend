@@ -12,15 +12,26 @@ export interface ExerciseDetail {
   description: string;
   instructions: string;
   videoUrl: string | null;
+  cvtDescription: string | null; // Sustento CVT
+  evmDescription: string | null; // Sustento EVM
   completionCount?: number; // Cuántas veces se completó (0-4)
   completedDates?: Date[]; // Fechas de completado
   isCompletedThisWeek?: boolean; // Si está completado en la semana actual
 }
 
+export interface ExerciseSummary {
+  exerciseName: string;
+  groupName: string;
+  level: number;
+  description: string;
+  cvtDescription: string | null;
+  evmDescription: string | null;
+}
+
 export interface DayPlan {
   day: number;
   dayName: string;
-  exercises: ExerciseDetail[];
+  exercises: ExerciseDetail[] | ExerciseSummary[];
 }
 
 export interface WeeklyPlan {
@@ -191,31 +202,61 @@ export class TrainingPlansService {
 
     // 11. Formatear respuesta para el frontend
     const currentWeek = 1; // Al crear el plan siempre empieza en semana 1
+    
+    // Obtener nombres de grupos para focusGroups
+    const focusGroupsWithNames = await this.prisma.exerciseGroup.findMany({
+      where: {
+        groupNumber: { in: weakGroups },
+      },
+      select: {
+        name: true,
+      },
+    });
+
     const weekPlan: DayPlan[] = [
       {
         day: 1,
         dayName: 'Lunes',
-        exercises: this.formatExercisesForDay(createdPlan.exercises, 1, currentWeek),
+        exercises: this.formatExercisesForDay(createdPlan.exercises, 1, currentWeek).map(ex => ({
+          exerciseName: ex.exerciseName,
+          groupName: ex.groupName,
+          level: ex.level,
+          description: ex.description,
+          cvtDescription: ex.cvtDescription,
+          evmDescription: ex.evmDescription,
+        })),
       },
       {
         day: 3,
         dayName: 'Miércoles',
-        exercises: this.formatExercisesForDay(createdPlan.exercises, 3, currentWeek),
+        exercises: this.formatExercisesForDay(createdPlan.exercises, 3, currentWeek).map(ex => ({
+          exerciseName: ex.exerciseName,
+          groupName: ex.groupName,
+          level: ex.level,
+          description: ex.description,
+          cvtDescription: ex.cvtDescription,
+          evmDescription: ex.evmDescription,
+        })),
       },
       {
         day: 5,
         dayName: 'Viernes',
-        exercises: this.formatExercisesForDay(createdPlan.exercises, 5, currentWeek),
+        exercises: this.formatExercisesForDay(createdPlan.exercises, 5, currentWeek).map(ex => ({
+          exerciseName: ex.exerciseName,
+          groupName: ex.groupName,
+          level: ex.level,
+          description: ex.description,
+          cvtDescription: ex.cvtDescription,
+          evmDescription: ex.evmDescription,
+        })),
       },
     ];
 
     return {
       planId: createdPlan.id,
-      frequency,
-      focusGroups: weakGroups,
+      focusGroups: focusGroupsWithNames.map(g => g.name),
       startDate: createdPlan.startDate,
       endDate: createdPlan.endDate,
-      currentWeek,
       weekPlan,
       instructions:
         'Repite esta misma semana durante 4 semanas consecutivas. Al finalizar el mes, realiza una nueva evaluación para ajustar tu plan.',
@@ -239,6 +280,8 @@ export class TrainingPlansService {
         description: ex.exerciseLevel.description,
         instructions: ex.exerciseLevel.exercise.instructions,
         videoUrl: ex.exerciseLevel.videoUrl,
+        cvtDescription: ex.exerciseLevel.exercise.cvtDescription,
+        evmDescription: ex.exerciseLevel.exercise.evmDescription,
         completionCount: ex.completionCount,
         completedDates: ex.completedDates,
         isCompletedThisWeek: ex.completionCount >= currentWeek, // ✓ o ✗
@@ -335,10 +378,20 @@ export class TrainingPlansService {
       (ex) => ex.completionCount >= currentWeek,
     ).length;
 
+    // Obtener nombres de grupos para focusGroups
+    const focusGroupsWithNames = await this.prisma.exerciseGroup.findMany({
+      where: {
+        groupNumber: { in: activePlan.focusGroups },
+      },
+      select: {
+        name: true,
+      },
+    });
+
     return {
       planId: activePlan.id,
       frequency: activePlan.frequency,
-      focusGroups: activePlan.focusGroups,
+      focusGroups: focusGroupsWithNames.map(g => g.name),
       startDate: activePlan.startDate,
       endDate: activePlan.endDate,
       currentWeek, // Semana actual bloqueada
@@ -470,6 +523,60 @@ export class TrainingPlansService {
   }
 
   /**
+   * Obtiene un ejercicio específico del plan de entrenamiento
+   */
+  async getExercise(planExerciseId: string) {
+    const planExercise = await this.prisma.trainingPlanExercise.findUnique({
+      where: { id: planExerciseId },
+      include: {
+        plan: {
+          include: {
+            exercises: true,
+          },
+        },
+        exerciseLevel: {
+          include: {
+            exercise: {
+              include: {
+                group: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!planExercise) {
+      throw new NotFoundException(
+        `Ejercicio con ID ${planExerciseId} no encontrado`,
+      );
+    }
+
+    // Calcular semana actual del plan
+    const currentWeek = this.calculateCurrentWeek(planExercise.plan);
+
+    return {
+      planExerciseId: planExercise.id,
+      exerciseLevelId: planExercise.exerciseLevel.id,
+      exerciseId: planExercise.exerciseLevel.exercise.id,
+      exerciseName: planExercise.exerciseLevel.exercise.name,
+      groupNumber: planExercise.exerciseLevel.exercise.group.groupNumber,
+      groupName: planExercise.exerciseLevel.exercise.group.name,
+      level: planExercise.exerciseLevel.level,
+      description: planExercise.exerciseLevel.description,
+      instructions: planExercise.exerciseLevel.exercise.instructions,
+      videoUrl: planExercise.exerciseLevel.videoUrl,
+      cvtDescription: planExercise.exerciseLevel.exercise.cvtDescription,
+      evmDescription: planExercise.exerciseLevel.exercise.evmDescription,
+      completionCount: planExercise.completionCount,
+      completedDates: planExercise.completedDates,
+      isCompletedThisWeek: planExercise.completionCount >= currentWeek,
+      dayOfWeek: planExercise.dayOfWeek,
+      orderInDay: planExercise.orderInDay,
+    };
+  }
+
+  /**
    * Obtiene ejercicios de grupos específicos con un nivel determinado
    */
   private async getExercisesByGroups(
@@ -504,6 +611,8 @@ export class TrainingPlansService {
       description: el.description,
       instructions: el.exercise.instructions,
       videoUrl: el.videoUrl,
+      cvtDescription: el.exercise.cvtDescription,
+      evmDescription: el.exercise.evmDescription,
     }));
   }
 
