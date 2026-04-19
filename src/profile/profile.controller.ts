@@ -4,7 +4,7 @@ import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('Profile')
-@Controller('profile')
+@Controller(['profile', 'profiles'])
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
@@ -66,5 +66,36 @@ export class ProfileController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.profileService.updateProfile(userId, dto);
+  }
+
+  @Get(':profileId/vocal-range/latest')
+  @ApiOperation({ summary: 'Obtener rango vocal de la última evaluación del perfil' })
+  @ApiParam({
+    name: 'profileId',
+    description: 'ID del perfil',
+    example: 'clx123profile',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Rango vocal obtenido exitosamente',
+    schema: {
+      example: {
+        profileId: 'clx123profile',
+        evaluationId: 'clx999eval',
+        sessionId: 'e8f7a53f-91f5-4a9d-81db-4d1a5705d97f',
+        evaluatedAt: '2026-04-16T10:15:30.000Z',
+        vocalRange: {
+          minMidi: 48,
+          maxMidi: 72,
+          spanSemitones: 24,
+          minNote: 'C3',
+          maxNote: 'C5',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Perfil o evaluación no encontrada' })
+  async getLatestVocalRange(@Param('profileId') profileId: string) {
+    return this.profileService.getLatestVocalRange(profileId);
   }
 }
