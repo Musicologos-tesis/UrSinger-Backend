@@ -26,6 +26,6 @@ services:
 
 databases:
   - name: ursinger-postgres
-    plan: starter
+    plan: basic-256mb
     databaseName: ursinger_db
     user: ursinger_user
