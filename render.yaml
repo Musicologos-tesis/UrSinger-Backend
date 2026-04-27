@@ -21,3 +21,5 @@ services:
         value: 7d
       - key: NODE_VERSION
         value: 22
+      - key: ML_SERVICE_URL
+        value: https://ursinger-ml-api.onrender.com
