@@ -1,4 +1,10 @@
-import { Controller, Get, Put, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Body,
+  Param,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -22,7 +28,7 @@ export class ProfileController {
       example: {
         id: 'clx123xyz',
         userId: 'clx123abc',
-        name: 'Juan Pérez',
+        name: 'Juan Perez',
         age: 25,
         gender: 'male',
         weeklyTrainingFreq: 3,
@@ -50,7 +56,7 @@ export class ProfileController {
       example: {
         id: 'clx123xyz',
         userId: 'clx123abc',
-        name: 'Juan Pérez Actualizado',
+        name: 'Juan Perez Actualizado',
         age: 26,
         gender: 'male',
         weeklyTrainingFreq: 5,
@@ -60,7 +66,7 @@ export class ProfileController {
     },
   })
   @ApiResponse({ status: 404, description: 'Perfil no encontrado' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 400, description: 'Datos invalidos' })
   async updateProfile(
     @Param('userId') userId: string,
     @Body() dto: UpdateProfileDto,
@@ -69,7 +75,7 @@ export class ProfileController {
   }
 
   @Get(':profileId/vocal-range/latest')
-  @ApiOperation({ summary: 'Obtener rango vocal de la última evaluación del perfil' })
+  @ApiOperation({ summary: 'Obtener rango vocal de la ultima evaluacion del perfil' })
   @ApiParam({
     name: 'profileId',
     description: 'ID del perfil',
@@ -94,8 +100,25 @@ export class ProfileController {
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Perfil o evaluación no encontrada' })
+  @ApiResponse({ status: 404, description: 'Perfil o evaluacion no encontrada' })
   async getLatestVocalRange(@Param('profileId') profileId: string) {
     return this.profileService.getLatestVocalRange(profileId);
+  }
+
+  @Get(':profileId/evaluations/latest-summary')
+  @ApiOperation({
+    summary: 'Obtener resumen de ultima evaluacion y comparacion',
+    description:
+      'Devuelve ultima evaluacion, evaluacion anterior (si existe), deltas y tendencia (improving/stable/declining).',
+  })
+  @ApiParam({
+    name: 'profileId',
+    description: 'ID del perfil',
+    example: 'clx123profile',
+  })
+  @ApiResponse({ status: 200, description: 'Resumen de evaluaciones obtenido' })
+  @ApiResponse({ status: 404, description: 'Perfil sin evaluaciones' })
+  async getLatestEvaluationSummary(@Param('profileId') profileId: string) {
+    return this.profileService.getLatestEvaluationSummary(profileId);
   }
 }

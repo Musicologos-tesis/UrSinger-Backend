@@ -186,8 +186,10 @@ export class MetricsService {
         throw error;
       }
 
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       throw new HttpException(
-        `Failed to connect to ML service: ${error.message}`,
+        `Failed to connect to ML service: ${errorMessage}`,
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
