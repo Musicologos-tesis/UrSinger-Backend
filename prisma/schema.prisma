@@ -106,6 +106,7 @@ model Evaluation {
   weaknessesDetected String[] // Grupos con carencias detectados: ["weak_G1", "weak_G4"]
   totalWeaknesses   Int      // Cantidad total de carencias detectadas
   confidenceScores  Json     // Scores de confianza por grupo: { "weak_G1": 0.08, ... }
+  groupMetrics      Json?    // Métricas por grupo: score, threshold, is_weak, achievement_pct, missing_to_clear_pct
   
   createdAt         DateTime @default(now())
   

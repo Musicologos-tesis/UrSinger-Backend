@@ -8,6 +8,19 @@ export class MetricsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private getWeaknessesFromGroupMetrics(groupMetrics: Record<string, unknown>): string[] {
+    return Object.entries(groupMetrics)
+      .filter(([, metric]) => {
+        if (!metric || typeof metric !== 'object') {
+          return false;
+        }
+
+        const isWeak = (metric as { is_weak?: boolean }).is_weak;
+        return isWeak === true;
+      })
+      .map(([group]) => `weak_${group}`);
+  }
+
   /**
    * Recibe métricas completas del frontend y consulta el modelo ML
    */
@@ -57,7 +70,7 @@ export class MetricsService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
+        } as any,
         body: JSON.stringify(mlPayload),
       });
 
@@ -74,10 +87,26 @@ export class MetricsService {
       // Log para debugging
       console.log('ML Service Response:', JSON.stringify(prediction, null, 2));
 
-      // Interpretar respuesta del ML
-      const weaknessesDetected = prediction.weaknesses_detected || [];
-      const totalWeaknesses = prediction.total_weaknesses || 0;
-      const confidenceScores = prediction.confidence_scores || {};
+      // Interpretar respuesta del ML (estructura nueva + compatibilidad)
+      const groupMetrics =
+        prediction.group_metrics && typeof prediction.group_metrics === 'object'
+          ? (prediction.group_metrics as Record<string, any>)
+          : {};
+
+      const confidenceScores =
+        prediction.confidence_scores && typeof prediction.confidence_scores === 'object'
+          ? prediction.confidence_scores
+          : {};
+
+      const weaknessesDetected =
+        Array.isArray(prediction.weaknesses_detected) && prediction.weaknesses_detected.length > 0
+          ? prediction.weaknesses_detected
+          : this.getWeaknessesFromGroupMetrics(groupMetrics);
+
+      const totalWeaknesses =
+        typeof prediction.total_weaknesses === 'number'
+          ? prediction.total_weaknesses
+          : weaknessesDetected.length;
 
       // Guardar la evaluación en la base de datos (upsert si ya existe)
       const evaluation = await this.prisma.evaluation.upsert({
@@ -103,7 +132,8 @@ export class MetricsService {
           weaknessesDetected,
           totalWeaknesses,
           confidenceScores,
-        },
+          groupMetrics,
+        } as any,
         create: {
           profileId: dto.profileId,
           sessionId: dto.sessionId,
@@ -128,7 +158,8 @@ export class MetricsService {
           weaknessesDetected,
           totalWeaknesses,
           confidenceScores,
-        },
+          groupMetrics,
+        } as any,
       });
 
       // Formatear grupos para respuesta amigable
@@ -146,6 +177,7 @@ export class MetricsService {
               ? `Se detectaron carencias en los grupos: ${weaknessGroups.join(', ')}`
               : 'No se detectaron carencias significativas',
           confidence: confidenceScores,
+          groupMetrics,
         },
         createdAt: evaluation.createdAt,
       };
@@ -154,8 +186,10 @@ export class MetricsService {
         throw error;
       }
 
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       throw new HttpException(
-        `Failed to connect to ML service: ${error.message}`,
+        `Failed to connect to ML service: ${errorMessage}`,
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
