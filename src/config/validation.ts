@@ -7,4 +7,5 @@ export const validationSchema = Joi.object({
   CORS_ORIGIN: Joi.string().required(),
   JWT_SECRET: Joi.string().default('ursinger-secret-key-change-in-production'),
   JWT_EXPIRES_IN: Joi.string().default('7d'),
+  ML_SERVICE_URL: Joi.string().default('http://localhost:8000'),
 });

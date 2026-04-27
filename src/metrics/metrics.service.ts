@@ -1,12 +1,18 @@
 import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { EvaluationMetricsDto } from './dto/evaluation-metrics.dto';
 
 @Injectable()
 export class MetricsService {
-  private readonly ML_SERVICE_URL = 'http://localhost:8000';
+  private readonly ML_SERVICE_URL: string;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.ML_SERVICE_URL = this.configService.get<string>('ML_SERVICE_URL') || 'http://localhost:8000';
+  }
 
   private getWeaknessesFromGroupMetrics(groupMetrics: Record<string, unknown>): string[] {
     return Object.entries(groupMetrics)
