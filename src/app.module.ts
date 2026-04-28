@@ -6,6 +6,7 @@ import { CalibrationsModule } from './calibrations/calibrations.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
+import { ExercisesModule } from './exercises/exercises.module';
 import { TrainingPlansModule } from './training-plans/training-plans.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { TrainingPlansModule } from './training-plans/training-plans.module';
     ProfileModule,
     CalibrationsModule,
     MetricsModule,
+    ExercisesModule,
     TrainingPlansModule,
   ],
 })
