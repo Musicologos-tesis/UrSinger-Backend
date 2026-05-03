@@ -25,7 +25,7 @@ async function main() {
         create: [
           {
             exerciseNumber: 1,
-            name: 'Breath Flow Hold',
+            name: 'Flujo de aire sostenido',
             rationale: 'CVT (Support) + EVM (Flow)',
             cvtDescription: 'Support: Uso activo del cuerpo para sostener la voz con apoyo diafragmático constante.',
             evmDescription: 'Flow: Mantener un flujo de aire constante y equilibrado durante la emisión sostenida.',
@@ -40,12 +40,12 @@ async function main() {
           },
           {
             exerciseNumber: 2,
-            name: 'S–Z Balance',
+            name: 'Balance del aire sin voz / con voz',
             rationale: 'EVM (Flow)',
             cvtDescription: null,
-            evmDescription: 'Flow: Comparar el flujo de aire sin voz (S) con el flujo con voz (Z) para evaluar eficiencia vocal.',
-            objective: 'Controlar el flujo de aire comparando la duración del sonido "S" (aire) con "Z" (voz).',
-            instructions: 'Emitir "ssss" hasta agotar el aire. Luego emitir "zzzz" buscando igualar la duración. UrSinger mide consistencia y duración.',
+            evmDescription: 'Flow: Comparar el flujo de aire sin voz con el flujo con voz para evaluar eficiencia vocal.',
+            objective: 'Controlar el flujo de aire comparando la duración del sonido "S" con voz.',
+            instructions: 'Emitir "ssss" hasta agotar el aire. Luego emitir una nota buscando igualar la duración. UrSinger mide consistencia y duración.',
             levels: {
               create: [
                 { level: 1, description: 'Cada sonido dura 3 segundos.', videoUrl: null },
@@ -55,7 +55,7 @@ async function main() {
           },
           {
             exerciseNumber: 3,
-            name: 'Dynamic Wave',
+            name: 'Potencia dinámica',
             rationale: 'CVT (Metal Control)',
             cvtDescription: 'Metal Control: Mantener control del flujo durante cambios de volumen sin perder claridad vocal.',
             evmDescription: null,
@@ -84,7 +84,7 @@ async function main() {
         create: [
           {
             exerciseNumber: 1,
-            name: 'Pitch Target',
+            name: 'Nota objetivo',
             rationale: 'EVM (Onset)',
             cvtDescription: null,
             evmDescription: 'Onset: Coordinación precisa entre el inicio del flujo de aire y la activación de las cuerdas vocales.',
@@ -99,7 +99,7 @@ async function main() {
           },
           {
             exerciseNumber: 2,
-            name: 'Pitch Steps',
+            name: 'Notas escalonadas',
             rationale: 'CVT (Neutral) + EVM (Pitch memory)',
             cvtDescription: 'Neutral: Emisión libre y relajada que permite cambios de pitch sin tensión laríngea.',
             evmDescription: 'Pitch Memory: Capacidad de reproducir intervalos precisos entre notas consecutivas.',
@@ -114,7 +114,7 @@ async function main() {
           },
           {
             exerciseNumber: 3,
-            name: 'Pitch Glide',
+            name: 'Deslizamiento entre notas',
             rationale: 'CVT (Neutral flow) + EVM (Pitch glide)',
             cvtDescription: 'Neutral Flow: Mantener el modo neutro durante todo el deslizamiento tonal.',
             evmDescription: 'Pitch Glide: Transiciones continuas y suaves entre diferentes alturas tonales.',
@@ -143,7 +143,7 @@ async function main() {
         create: [
           {
             exerciseNumber: 1,
-            name: 'Steady Tone',
+            name: 'Nota estable',
             rationale: 'CVT (Neutral) + EVM (Anchoring)',
             cvtDescription: 'Neutral: Modo vocal que permite estabilidad tonal sin tensión laríngea.',
             evmDescription: 'Anchoring: Estabilización de la laringe para mantener pitch constante.',
@@ -158,7 +158,7 @@ async function main() {
           },
           {
             exerciseNumber: 2,
-            name: 'Controlled vibrato',
+            name: 'Vibrato controlado',
             rationale: 'EVM (Anchoring + Onset control)',
             cvtDescription: null,
             evmDescription: 'Anchoring + Onset Control: Oscilaciones regulares del pitch mediante control muscular fino.',
@@ -173,7 +173,7 @@ async function main() {
           },
           {
             exerciseNumber: 3,
-            name: 'Clean onset',
+            name: 'Ataque limpio de nota',
             rationale: 'CVT (Avoid constriction) + EVM (True Vocal Fold Onset)',
             cvtDescription: 'Avoid Constriction: Inicio de nota sin tensión ni constricción faríngea.',
             evmDescription: 'True Vocal Fold Onset: Activación precisa de las cuerdas vocales desde el primer momento.',
@@ -202,7 +202,7 @@ async function main() {
         create: [
           {
             exerciseNumber: 1,
-            name: 'Single Burst',
+            name: 'Ataque potente de nota',
             rationale: 'CVT (Twang/Overdrive)',
             cvtDescription: 'Twang/Overdrive: Modos vocales que permiten proyección potente sin tensión.',
             evmDescription: null,
@@ -217,7 +217,7 @@ async function main() {
           },
           {
             exerciseNumber: 2,
-            name: 'Volume Rise',
+            name: 'Incremento de volumen',
             rationale: 'EVM (Source–Filter Balance) + CVT (Metal Control)',
             cvtDescription: 'Metal Control: Mantener claridad vocal durante aumento de volumen.',
             evmDescription: 'Source-Filter Balance: Equilibrio entre la fuente (cuerdas vocales) y el filtro (tracto vocal).',
@@ -232,7 +232,7 @@ async function main() {
           },
           {
             exerciseNumber: 3,
-            name: 'Loud–Soft Alternance',
+            name: 'Dinamismo de potencia controlado',
             rationale: 'CVT (Twang + Metal Control) + EVM (Anchoring)',
             cvtDescription: 'Twang + Metal Control: Cambios dinámicos manteniendo claridad y eficiencia vocal.',
             evmDescription: 'Anchoring: Estabilización laríngea durante cambios de volumen.',
@@ -261,7 +261,7 @@ async function main() {
         create: [
           {
             exerciseNumber: 1,
-            name: 'Vocal glide',
+            name: 'Deslizamiento vocal',
             rationale: 'CVT (Edge) + EVM (Pitch Glide)',
             cvtDescription: 'Edge: Modo vocal que facilita transiciones entre registros sin quiebres.',
             evmDescription: 'Pitch Glide: Deslizamiento continuo del pitch a través de diferentes registros.',
@@ -276,7 +276,7 @@ async function main() {
           },
           {
             exerciseNumber: 2,
-            name: 'Step Expansion',
+            name: 'Expansión escalonada de notas',
             rationale: 'EVM (CT–TA Balance)',
             cvtDescription: null,
             evmDescription: 'CT-TA Balance: Equilibrio entre los músculos cricotiroides (agudos) y tiroaritenoideos (graves).',
@@ -291,7 +291,7 @@ async function main() {
           },
           {
             exerciseNumber: 3,
-            name: 'Mix coordination',
+            name: 'Transición de registro mixto',
             rationale: 'CVT (Curbing) + EVM (Anchoring + CT–TA Balance)',
             cvtDescription: 'Curbing: Modo vocal que facilita el registro mixto entre voz de pecho y cabeza.',
             evmDescription: 'Anchoring + CT-TA Balance: Coordinación muscular para transiciones suaves entre registros.',
